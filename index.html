@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phys-Sci Mastery: Professional Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollToPlugin.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        :root {
+            /* Palette: Professional Blue & Clean Slate */
+            --primary: #2563eb;
+            --primary-dark: #1e40af;
+            --secondary: #64748b;
+            --accent: #3b82f6;
+            --surface: #ffffff;
+            --bg-body: #f1f5f9;
+            --text-main: #0f172a;
+            --text-light: #475569;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --radius: 16px;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+        
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            margin: 0;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* --- Loading Overlay --- */
+        #loading-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(5px);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.3s;
+        }
+        .spinner {
+            width: 50px; height: 50px;
+            border: 4px solid #e2e8f0;
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .loading-text { margin-top: 15px; font-family: 'Prompt'; font-weight: 500; color: var(--primary); }
+
+        /* --- Layout --- */
+        .app-container {
+            max-width: 800px;
+            margin: 0 auto;
+            min-height: 100vh;
+            background: var(--surface);
+            box-shadow: var(--shadow-lg);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- Header --- */
+        .app-header {
+            padding: 15px 25px;
+            background: rgba(255,255,255,0.9);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid #e2e8f0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .brand { font-family: 'Prompt'; font-weight: 700; font-size: 1.2rem; color: var(--primary); display: flex; align-items: center; gap: 10px; }
+        
+        .timer-badge {
+            background: var(--text-main);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 50px;
+            font-family: 'Prompt';
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: flex; align-items: center; gap: 8px;
+            transition: background 0.3s;
+        }
+        .timer-badge.urgent { background: var(--danger); animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+
+        .progress-line { position: absolute; bottom: 0; left: 0; height: 3px; background: var(--primary); width: 0%; transition: width 0.5s ease; }
+
+        /* --- Content Sections --- */
+        .section-view { padding: 30px; flex: 1; opacity: 0; display: none; } /* Hidden by default for GSAP */
+
+        /* Setup Card */
+        .setup-card {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: var(--radius);
+            padding: 30px;
+            box-shadow: var(--shadow-md);
+        }
+        .form-group { margin-bottom: 20px; }
+        .form-label { display: block; font-family: 'Prompt'; font-weight: 500; margin-bottom: 8px; color: var(--text-main); }
+        .form-control {
+            width: 100%; padding: 12px 16px;
+            border: 1px solid #cbd5e1; border-radius: 10px;
+            font-family: 'Sarabun'; font-size: 1rem;
+            transition: all 0.2s;
+        }
+        .form-control:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+        
+        /* Question Items */
+        .q-card {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: var(--radius);
+            padding: 25px;
+            margin-bottom: 25px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        .q-card.unanswered-alert {
+            border: 2px solid var(--danger);
+            background: #fff5f5;
+            animation: shakeX 0.5s;
+        }
+        
+        .q-meta { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--secondary); margin-bottom: 15px; }
+        .q-text { font-size: 1.25rem; font-weight: 500; line-height: 1.6; margin-bottom: 20px; }
+        
+        .choice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .choice-btn {
+            padding: 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            background: white;
+            font-family: 'Prompt'; font-weight: 600; font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+        .choice-btn:hover { border-color: var(--primary-dark); background: #eff6ff; }
+        .choice-btn.selected { background: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3); }
+
+        .clear-link {
+            display: inline-block;
+            margin-top: 15px;
+            font-size: 0.9rem;
+            color: var(--secondary);
+            cursor: pointer;
+            text-decoration: none;
+            border-bottom: 1px dotted var(--secondary);
+            transition: color 0.2s;
+        }
+        .clear-link:hover { color: var(--danger); border-color: var(--danger); }
+
+        /* Result & Review */
+        .score-display { text-align: center; margin-bottom: 40px; }
+        .score-circle {
+            width: 140px; height: 140px;
+            margin: 0 auto 20px;
+            border-radius: 50%;
+            background: conic-gradient(var(--primary) 0%, #e2e8f0 0%);
+            display: flex; justify-content: center; align-items: center;
+            position: relative;
+        }
+        .score-inner {
+            width: 120px; height: 120px; background: white; border-radius: 50%;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .score-val { font-size: 2.5rem; font-weight: 700; font-family: 'Prompt'; line-height: 1; color: var(--text-main); }
+        .score-max { font-size: 0.9rem; color: var(--secondary); }
+
+        .review-item {
+            border-left: 5px solid #ccc;
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            box-shadow: var(--shadow-sm);
+            position: relative;
+        }
+        .review-item.is-correct { border-left-color: var(--success); background: #f0fdfa; }
+        .review-item.is-wrong { border-left-color: var(--danger); background: #fef2f2; }
+        
+        .ref-badge {
+            position: absolute; top: 15px; right: 15px;
+            background: #e2e8f0; color: var(--text-light);
+            font-size: 0.75rem; padding: 4px 10px; border-radius: 20px;
+            font-weight: 600;
+        }
+
+        .exp-box { margin-top: 15px; padding: 12px; background: rgba(255,255,255,0.6); border-radius: 8px; font-size: 0.95rem; color: #334155; }
+
+        /* Buttons & Utils */
+        .btn-primary {
+            width: 100%; padding: 16px;
+            background: var(--primary); color: white;
+            border: none; border-radius: 12px;
+            font-family: 'Prompt'; font-weight: 600; font-size: 1.1rem;
+            cursor: pointer; transition: transform 0.1s, box-shadow 0.2s;
+        }
+        .btn-primary:active { transform: translateY(2px); }
+        .btn-nav { flex: 1; background: var(--surface); color: var(--text-main); border: 2px solid #e2e8f0; }
+        .btn-nav:hover { border-color: var(--primary); }
+
+        .hidden { display: none !important; }
+        .d-flex { display: flex; gap: 15px; }
+        
+        /* Mobile */
+        @media (max-width: 600px) {
+            .app-container { min-height: 100vh; border-radius: 0; }
+            .section-view { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loading-overlay" class="hidden">
+        <div class="spinner"></div>
+        <div class="loading-text">กำลังประมวลผล...</div>
+    </div>
+
+    <div class="app-container">
+        <header class="app-header">
+            <div class="brand">
+                <i class="fa-solid fa-atom"></i> Sci-Pro
+            </div>
+            <div id="timer-box" class="timer-badge hidden">
+                <i class="fa-regular fa-clock"></i> <span id="time-text">00:00</span>
+            </div>
+            <div class="progress-line" id="progress-bar"></div>
+        </header>
+
+        <section id="setup-screen" class="section-view" style="display: block; opacity: 1;">
+            <div style="text-align: center; margin-bottom: 30px;">
+                <h1 style="font-family:'Prompt'; margin:0 0 10px 0;">ยินดีต้อนรับสู่ห้องสอบ</h1>
+                <p style="color:var(--secondary);">แบบทดสอบวิทย์กายภาพ (ตอนที่ 2)</p>
+            </div>
+
+            <div class="setup-card">
+                <div class="form-group">
+                    <label class="form-label"><i class="fa-solid fa-stopwatch"></i> ระยะเวลาสอบ</label>
+                    <select id="time-select" class="form-control">
+                        <option value="0">โหมดฝึกฝน (ไม่จับเวลา)</option>
+                        <option value="15">15 นาที</option>
+                        <option value="20">20 นาที</option>
+                        <option value="30">30 นาที</option>
+                        <option value="60">1 ชั่วโมง</option>
+                        <option value="custom">กำหนดเอง (นาที)</option>
+                    </select>
+                    <input type="number" id="custom-time-input" class="form-control hidden" placeholder="ระบุจำนวนนาที" style="margin-top: 10px;">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label"><i class="fa-solid fa-layer-group"></i> รูปแบบการแสดงผล</label>
+                    <div class="choice-grid" style="grid-template-columns: 1fr 1fr; gap:10px;">
+                        <label class="choice-btn" style="text-align:center;">
+                            <input type="radio" name="viewMode" value="list" checked style="display:none;" onchange="updateModeUI(this)">
+                            <i class="fa-solid fa-list"></i> List View
+                        </label>
+                        <label class="choice-btn" style="text-align:center;">
+                            <input type="radio" name="viewMode" value="step" style="display:none;" onchange="updateModeUI(this)">
+                            <i class="fa-solid fa-forward"></i> Step Mode
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group" style="background:#f8fafc; padding:15px; border-radius:10px;">
+                    <label style="display:flex; align-items:center; gap:10px; margin-bottom:10px; cursor:pointer;">
+                        <input type="checkbox" id="shuffle-opt"> สลับลำดับข้อสอบ
+                    </label>
+                    <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                        <input type="checkbox" id="page-opt" checked> แสดงเลขหน้าอ้างอิง
+                    </label>
+                </div>
+
+                <button class="btn-primary" onclick="app.initQuiz()">เริ่มทำข้อสอบ <i class="fa-solid fa-arrow-right"></i></button>
+            </div>
+        </section>
+
+        <section id="quiz-screen" class="section-view">
+            <div id="quiz-container">
+                </div>
+
+            <div id="step-nav" class="d-flex hidden" style="margin-top: 30px;">
+                <button class="btn-primary btn-nav" id="prev-btn" onclick="app.navigate(-1)">ย้อนกลับ</button>
+                <button class="btn-primary" id="next-btn" onclick="app.navigate(1)">ถัดไป</button>
+            </div>
+
+            <div style="margin-top: 40px;">
+                <button id="submit-btn" class="btn-primary hidden" style="background:var(--success);" onclick="app.validateSubmit()">ส่งคำตอบทั้งหมด <i class="fa-solid fa-check"></i></button>
+            </div>
+        </section>
+
+        <section id="result-screen" class="section-view">
+            <div class="score-display">
+                <div class="score-circle" id="score-ring">
+                    <div class="score-inner">
+                        <div class="score-val" id="final-score">0</div>
+                        <div class="score-max">/ 26</div>
+                    </div>
+                </div>
+                <h2 id="result-msg" style="font-family:'Prompt'; margin:10px 0;"></h2>
+                <button class="btn-primary" style="max-width:200px;" onclick="location.reload()">ทำอีกครั้ง</button>
+            </div>
+            
+            <div style="border-bottom: 2px solid #e2e8f0; margin-bottom: 20px; padding-bottom:10px; font-weight:600;">
+                <i class="fa-solid fa-clipboard-check"></i> เฉลยและคำอธิบาย
+            </div>
+            <div id="review-list"></div>
+        </section>
+    </div>
+
+<script>
+/* --- Data Source --- */
+const questionsDB = [
+    { p: 3, q: "อากาศเป็นสารผสม", a: true, e: "อากาศประกอบด้วยแก๊สหลายชนิด (N2, O2, Ar, etc.) ผสมกันเป็นเนื้อเดียว" },
+    { p: 3, q: "ธาตุและสารประกอบเป็นสารบริสุทธิ์", a: true, e: "มีองค์ประกอบทางเคมีที่แน่นอนและจุดเดือด/จุดหลอมเหลวคงที่" },
+    { p: 3, q: "อะตอมเป็นอนุภาคที่เล็กที่สุดของสารที่อยู่ในธรรมชาติ", a: false, e: "ภายในอะตอมยังมีอนุภาคมูลฐาน (โปรตอน, นิวตรอน, อิเล็กตรอน) ที่เล็กกว่า" },
+    { p: 3, q: "โมเลกุลประกอบด้วย 2 อะตอมขึ้นไป", a: false, e: "แก๊สเฉื่อย (Noble Gases) สามารถอยู่เป็นโมเลกุลอะตอมเดี่ยวได้" },
+    { p: 3, q: "โปรตอน นิวตรอน และอิเล็กตรอนเป็นองค์ประกอบภายในอะตอม", a: true, e: "เป็นอนุภาคมูลฐานหลักของอะตอม" },
+    { p: 28, q: "O2 และ Pb เป็นธาตุ", a: true, e: "ประกอบด้วยอะตอมเพียงชนิดเดียว" },
+    { p: 28, q: "H2O และ NaCl เป็นสารประกอบ", a: true, e: "ประกอบด้วยธาตุต่างชนิดกันมารวมตัวทางเคมี" },
+    { p: 28, q: "สารประกอบและสารละลายเป็นสารผสม", a: false, e: "สารประกอบเป็นสารบริสุทธิ์ ส่วนสารละลายเป็นสารผสม" },
+    { p: 28, q: "สารละลายประกอบด้วยตัวละลายและตัวทำละลาย", a: true, e: "เป็นองค์ประกอบพื้นฐานของสารละลาย" },
+    { p: 28, q: "ไอออนลบมีจำนวนโปรตอนมากกว่าอิเล็กตรอน", a: false, e: "ไอออนลบเกิดจากการรับอิเล็กตรอน จึงมีอิเล็กตรอนมากกว่า" },
+    { p: 28, q: "โมเลกุลมีสมบัติเป็นกลางทางไฟฟ้า", a: true, e: "ประจุบวกและลบหักล้างกันหมดพอดี" },
+    { p: 28, q: "โซเดียม (Na) เป็นธาตุโลหะและคลอรีน (Cl) เป็นธาตุอโลหะ", a: true, e: "Na อยู่หมู่ 1 (โลหะ) Cl อยู่หมู่ 7 (อโลหะ)" },
+    { p: 28, q: "ที่อุณหภูมิต่ำกว่าจุดหลอมเหลว สารมีสถานะเป็นของเหลว", a: false, e: "ต่ำกว่าจุดหลอมเหลว สารจะมีสถานะเป็นของแข็ง" },
+    { p: 28, q: "จุดหลอมเหลวและจุดเยือกแข็งของสารหนึ่ง ๆ คืออุณหภูมิเดียวกัน", a: true, e: "เป็นจุดสมดุลระหว่างสถานะของแข็งและของเหลว" },
+    { p: 28, q: "ที่อุณหภูมิสูงกว่าจุดเดือด สารมีสถานะเป็นแก๊ส", a: true, e: "พลังงานความร้อนเอาชนะแรงยึดเหนี่ยวจนกลายเป็นไอ" },
+    { p: 28, q: "น้ำแข็งและไอน้ำมีองค์ประกอบทางเคมีเหมือนกัน", a: true, e: "คือ H2O เหมือนกัน ต่างกันเพียงสถานะ" },
+    { p: 28, q: "สารละลายเป็นสารผสมที่เป็นเนื้อเดียว", a: true, e: "มองเห็นเป็นเนื้อเดียวกันตลอดทุกส่วน (Homogeneous)" },
+    { p: 57, q: "จุดเดือดของน้ำทำให้โมเลกุล H2O แตกเป็น H และ O", a: false, e: "การเดือดทำลายแรงยึดเหนี่ยวระหว่างโมเลกุล ไม่ใช่พันธะเคมี" },
+    { p: 57, q: "เส้นพันธะในสูตรโครงสร้างแสดงการใช้เวเลนซ์อิเล็กตรอนร่วมกัน", a: true, e: "แทนพันธะโคเวเลนต์ (Covalent Bond)" },
+    { p: 57, q: "HF และ O2 เป็นสารไม่มีขั้ว", a: false, e: "HF เป็นสารมีขั้วสูงมากเพราะ EN ต่างกัน" },
+    { p: 57, q: "CH4 สามารถเกิดพันธะไฮโดรเจนได้", a: false, e: "พันธะไฮโดรเจนต้องเกิดจาก H จับกับ F, O, หรือ N เท่านั้น" },
+    { p: 57, q: "สารที่มีจุดเดือด 100 มีแรงยึดเหนี่ยวมากกว่าสารจุดเดือด 120", a: false, e: "จุดเดือดสูงกว่าแสดงว่าแรงยึดเหนี่ยวแข็งแรงกว่า" },
+    { p: 57, q: "ตัวเลขห้อยท้ายแสดงจำนวนอะตอมของธาตุแต่ละชนิด", a: true, e: "ระบุจำนวนอะตอมใน 1 โมเลกุล" },
+    { p: 57, q: "สูตรเอมพิริคัลของสารไอออนิกแสดงอัตราส่วนอย่างต่ำ", a: true, e: "ไอออนิกเป็นโครงผลึกร่างตาข่าย ไม่มีสูตรโมเลกุล" },
+    { p: 57, q: "H2O และ NaCl เป็นสูตรเคมีของน้ำและเกลือแกง", a: true, e: "เป็นสูตรเคมีมาตรฐาน" },
+    { p: 57, q: "สารละลายของ KNO3 เป็นสารละลายนอนอิเล็กโทรไลต์", a: false, e: "KNO3 เป็นเกลือ แตกตัวเป็นไอออนนำไฟฟ้าได้ (Electrolyte)" }
+];
+
+/* --- UI Helper --- */
+function toggleLoader(show) {
+    const el = document.getElementById('loading-overlay');
+    if(show) {
+        el.classList.remove('hidden');
+        el.style.opacity = 0;
+        gsap.to(el, { opacity: 1, duration: 0.2 });
+    } else {
+        gsap.to(el, { opacity: 0, duration: 0.3, onComplete: () => el.classList.add('hidden') });
+    }
+}
+
+function updateModeUI(radio) {
+    // Visual feedback for mode selection in setup
+    document.querySelectorAll('input[name="viewMode"]').forEach(input => {
+        input.parentElement.classList.toggle('selected', input.checked);
+    });
+}
+
+/* --- Quiz Application Class --- */
+class QuizApp {
+    constructor() {
+        this.questions = [];
+        this.userAns = {};
+        this.currentMode = 'list';
+        this.stepIndex = 0;
+        this.timer = null;
+        this.timeLeft = 0;
+        
+        // Custom time input toggle
+        document.getElementById('time-select').addEventListener('change', (e) => {
+            const customInput = document.getElementById('custom-time-input');
+            if(e.target.value === 'custom') {
+                customInput.classList.remove('hidden');
+                gsap.from(customInput, { y: -10, opacity: 0, duration: 0.3 });
+            } else {
+                customInput.classList.add('hidden');
+            }
+        });
+    }
+
+    initQuiz() {
+        const timeVal = document.getElementById('time-select').value;
+        const customVal = document.getElementById('custom-time-input').value;
+        const shuffle = document.getElementById('shuffle-opt').checked;
+        
+        // 1. Set Data
+        this.questions = [...questionsDB];
+        if(shuffle) this.questions.sort(() => Math.random() - 0.5);
+        this.currentMode = document.querySelector('input[name="viewMode"]:checked').value;
+        
+        // 2. Set Time
+        if(timeVal === 'custom') {
+            this.timeLeft = parseInt(customVal) * 60;
+        } else {
+            this.timeLeft = parseInt(timeVal) * 60;
+        }
+
+        // 3. Start Transition
+        toggleLoader(true);
+        setTimeout(() => {
+            document.getElementById('setup-screen').style.display = 'none';
+            document.getElementById('quiz-screen').style.display = 'block';
+            gsap.to('#quiz-screen', { opacity: 1, duration: 0.5 });
+            
+            this.renderQuiz();
+            
+            // Start Timer if needed
+            if(this.timeLeft > 0 && !isNaN(this.timeLeft)) {
+                this.startTimer();
+            } else {
+                document.getElementById('timer-box').classList.add('hidden');
+            }
+
+            toggleLoader(false);
+        }, 800);
+    }
+
+    renderQuiz() {
+        const container = document.getElementById('quiz-container');
+        container.innerHTML = '';
+        
+        if(this.currentMode === 'list') {
+            this.questions.forEach((q, i) => {
+                container.innerHTML += this.createCardHTML(q, i);
+            });
+            document.getElementById('submit-btn').classList.remove('hidden');
+            document.getElementById('step-nav').classList.add('hidden');
+        } else {
+            // Step Mode: Render one card
+            container.innerHTML = this.createCardHTML(this.questions[this.stepIndex], this.stepIndex);
+            this.updateStepNav();
+        }
+
+        this.updateProgress();
+    }
+
+    createCardHTML(q, index) {
+        const showPage = document.getElementById('page-opt').checked;
+        const saved = this.userAns[index];
+        
+        return `
+            <div class="q-card" id="q-card-${index}">
+                <div class="q-meta">
+                    <span><i class="fa-solid fa-hashtag"></i> ข้อที่ ${index + 1} / ${this.questions.length}</span>
+                    ${showPage ? `<span><i class="fa-regular fa-bookmark"></i> หน้า ${q.p}</span>` : ''}
+                </div>
+                <div class="q-text">${q.q}</div>
+                <div class="choice-grid">
+                    <button class="choice-btn ${saved === true ? 'selected' : ''}" onclick="app.answer(${index}, true)">
+                        <i class="fa-solid fa-check"></i> ถูก
+                    </button>
+                    <button class="choice-btn ${saved === false ? 'selected' : ''}" onclick="app.answer(${index}, false)">
+                        <i class="fa-solid fa-xmark"></i> ผิด
+                    </button>
+                </div>
+                ${saved !== undefined ? 
+                    `<div style="text-align:right;"><span class="clear-link" onclick="app.clearAnswer(${index})"><i class="fa-solid fa-eraser"></i> ล้างคำตอบ</span></div>` 
+                    : ''}
+            </div>
+        `;
+    }
+
+    answer(index, val) {
+        this.userAns[index] = val;
+        
+        // Remove error alert if present
+        document.getElementById(`q-card-${index}`).classList.remove('unanswered-alert');
+
+        // Confetti effect at cursor
+        confetti({
+            particleCount: 20,
+            spread: 40,
+            origin: { x: event.clientX / window.innerWidth, y: event.clientY / window.innerHeight },
+            colors: val ? ['#10b981'] : ['#ef4444']
+        });
+
+        if(this.currentMode === 'list') {
+            this.renderQuiz(); // Re-render to show selection & clear button
+        } else {
+            // Update current UI immediately for smoothness
+            this.renderQuiz();
+            // Auto next
+            setTimeout(() => this.navigate(1), 400);
+        }
+    }
+
+    clearAnswer(index) {
+        delete this.userAns[index];
+        this.renderQuiz();
+    }
+
+    navigate(dir) {
+        const next = this.stepIndex + dir;
+        if(next >= 0 && next < this.questions.length) {
+            this.stepIndex = next;
+            // Transition effect
+            gsap.fromTo('#quiz-container', 
+                { opacity: 0, x: dir * 20 }, 
+                { opacity: 1, x: 0, duration: 0.3 }
+            );
+            this.renderQuiz();
+        }
+    }
+
+    updateStepNav() {
+        document.getElementById('step-nav').classList.remove('hidden');
+        document.getElementById('prev-btn').disabled = this.stepIndex === 0;
+        
+        const isLast = this.stepIndex === this.questions.length - 1;
+        document.getElementById('next-btn').style.display = isLast ? 'none' : 'block';
+        document.getElementById('submit-btn').classList.toggle('hidden', !isLast);
+    }
+
+    updateProgress() {
+        const count = Object.keys(this.userAns).length;
+        const total = this.questions.length;
+        const pct = (count / total) * 100;
+        document.getElementById('progress-bar').style.width = pct + '%';
+    }
+
+    startTimer() {
+        const timerBadge = document.getElementById('timer-box');
+        timerBadge.classList.remove('hidden');
+        const display = document.getElementById('time-text');
+        
+        this.timer = setInterval(() => {
+            this.timeLeft--;
+            
+            const m = Math.floor(this.timeLeft / 60);
+            const s = this.timeLeft % 60;
+            display.innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+            
+            // Urgent visual
+            if(this.timeLeft <= 60) timerBadge.classList.add('urgent');
+
+            if(this.timeLeft <= 0) {
+                clearInterval(this.timer);
+                Swal.fire({
+                    title: 'หมดเวลา!',
+                    text: 'ระบบกำลังส่งคำตอบของคุณ',
+                    icon: 'warning',
+                    timer: 2000,
+                    showConfirmButton: false
+                }).then(() => this.showResult());
+            }
+        }, 1000);
+    }
+
+    validateSubmit() {
+        let missingIndex = -1;
+        
+        // Find first unanswered
+        for(let i=0; i<this.questions.length; i++) {
+            if(this.userAns[i] === undefined) {
+                missingIndex = i;
+                break;
+            }
+        }
+
+        if(missingIndex !== -1) {
+            Swal.fire({
+                title: 'ยังทำไม่ครบ!',
+                text: `คุณลืมตอบข้อที่ ${missingIndex + 1}`,
+                icon: 'info',
+                confirmButtonText: 'ไปที่ข้อนั้น'
+            }).then(() => {
+                if(this.currentMode === 'step') {
+                    this.stepIndex = missingIndex;
+                    this.renderQuiz();
+                } else {
+                    const card = document.getElementById(`q-card-${missingIndex}`);
+                    card.classList.add('unanswered-alert');
+                    gsap.to(window, { duration: 0.8, scrollTo: { y: card, offsetY: 100 } });
+                }
+            });
+        } else {
+            Swal.fire({
+                title: 'ยืนยันการส่ง?',
+                text: "ส่งแล้วจะไม่สามารถแก้ไขได้",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'ส่งคำตอบ',
+                cancelButtonText: 'ตรวจสอบอีกครั้ง'
+            }).then((res) => {
+                if(res.isConfirmed) {
+                    clearInterval(this.timer);
+                    this.showResult();
+                }
+            });
+        }
+    }
+
+    showResult() {
+        toggleLoader(true);
+        setTimeout(() => {
+            document.getElementById('quiz-screen').style.display = 'none';
+            document.getElementById('result-screen').style.display = 'block';
+            gsap.to('#result-screen', { opacity: 1, duration: 0.5 });
+            toggleLoader(false);
+            
+            this.calcAndRenderResult();
+        }, 1000);
+    }
+
+    calcAndRenderResult() {
+        let score = 0;
+        const reviewList = document.getElementById('review-list');
+        reviewList.innerHTML = '';
+        
+        this.questions.forEach((q, i) => {
+            const isCorrect = this.userAns[i] === q.a;
+            if(isCorrect) score++;
+
+            reviewList.innerHTML += `
+                <div class="review-item ${isCorrect ? 'is-correct' : 'is-wrong'}">
+                    <span class="ref-badge"><i class="fa-solid fa-book-open"></i> หน้า ${q.p}</span>
+                    <div style="font-weight:600; margin-bottom:5px;">ข้อที่ ${i+1}</div>
+                    <div style="font-size:1.1rem; margin-bottom:10px;">${q.q}</div>
+                    <div style="display:flex; justify-content:space-between; font-size:0.9rem;">
+                        <span>คุณตอบ: <strong>${this.userAns[i] === undefined ? 'ไม่ตอบ' : (this.userAns[i] ? 'ถูก' : 'ผิด')}</strong></span>
+                        <span style="color:${isCorrect ? 'var(--success)' : 'var(--danger)'}">
+                            ${isCorrect ? '<i class="fa-solid fa-check-circle"></i> ถูกต้อง' : '<i class="fa-solid fa-circle-xmark"></i> ผิด'}
+                        </span>
+                    </div>
+                    <div class="exp-box">
+                        <strong><i class="fa-solid fa-lightbulb"></i> เฉลย: ${q.a ? 'ถูก' : 'ผิด'}</strong><br>
+                        ${q.e}
+                    </div>
+                </div>
+            `;
+        });
+
+        // Score Animation
+        const percent = (score / this.questions.length) * 100;
+        document.getElementById('final-score').innerText = score;
+        
+        const resultMsg = document.getElementById('result-msg');
+        if(percent >= 75) {
+            resultMsg.innerHTML = '<span style="color:var(--success)">ยอดเยี่ยม! ผ่านเกณฑ์</span>';
+            resultMsg.innerHTML += ' <i class="fa-solid fa-trophy" style="color:#f59e0b"></i>';
+            confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+            
+            // Pie Chart Effect CSS
+            document.getElementById('score-ring').style.background = `conic-gradient(var(--success) ${percent}%, #e2e8f0 ${percent}%)`;
+        } else {
+            resultMsg.innerHTML = '<span style="color:var(--danger)">ยังไม่ผ่านเกณฑ์ (ต้องได้ 75%)</span>';
+            document.getElementById('score-ring').style.background = `conic-gradient(var(--danger) ${percent}%, #e2e8f0 ${percent}%)`;
+        }
+        
+        window.scrollTo(0,0);
+    }
+}
+
+// Initialize
+const app = new QuizApp();
+</script>
+</body>
+</html>
